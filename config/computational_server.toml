@@ -1,0 +1,4 @@
+﻿
+#
+#[computational_sever.multithreading]
+#thread_limit = 4

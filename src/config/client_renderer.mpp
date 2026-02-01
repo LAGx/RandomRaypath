@@ -1,0 +1,75 @@
+﻿module;
+#include <filesystem>
+#include <string>
+#include <expected>
+#include <format>
+#include <cstdint>
+export module ray.config;
+
+// pseudo glm
+export namespace glm {
+struct vec2i {
+        std::int32_t x, y;
+};
+struct vec4d {
+        double x, y, z, w;
+};
+};
+
+
+export namespace ray::config {
+
+enum class e_window_mode : std::int8_t {
+        none = 0,
+        windowed = none,
+        fullscreen = 1,
+        count
+};
+
+struct visual_style {
+        glm::vec4d color_nothing;
+        glm::vec4d color_density_low;
+        glm::vec4d color_density_high;
+
+        static const visual_style default_style;
+};
+
+class client_renderer {
+public:
+        bool enable_computational_server; // if true, it needs computational_server.toml
+
+        bool graphics_window_enabled;
+        e_window_mode window_mode; // 0 - windowed, 1 - fullscreen
+        std::int32_t display_index; // -1 - primary, actual index else
+        glm::vec2i window_position;
+        glm::vec2i window_size;
+
+        visual_style style;
+
+public:
+        static const client_renderer default_renderer;
+        static std::expected<client_renderer, std::string> load(std::filesystem::path target);
+
+        [[nodiscard]]
+        std::string to_string() const;
+};
+};
+
+
+template<>
+struct std::formatter<ray::config::client_renderer, char> : std::formatter<std::string, char> {
+        auto format(ray::config::client_renderer const& v, std::format_context& ctx) const {
+                return std::formatter<std::string, char>::format( v.to_string (), ctx);
+        }
+};
+
+
+template<>
+struct std::formatter<std::expected<ray::config::client_renderer, std::string>, char> : std::formatter<std::string, char> {
+        auto format(std::expected<ray::config::client_renderer, std::string> const& v, std::format_context& ctx) const {
+                if (v) {
+                        return std::format_to(ctx.out(), "{}", *v);
+                }
+                return std::format_to(ctx.out(), "<error: {}>", v.error());
+        }
+};
