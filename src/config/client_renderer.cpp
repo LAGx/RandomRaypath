@@ -9,9 +9,9 @@ using namespace ray;
 using namespace ray::config;
 
 const visual_style visual_style::default_style = {
-        .color_nothing = glm::vec4d(0.f, 0.f, 0.f, 1.f),
-        .color_density_low = glm::vec4d(0.f, 1.f, 0.f, 1.f),
-        .color_density_high = glm::vec4d(0.f, 0.f, 1.f, 1.f)
+        .color_nothing = glm::dvec4(0.f, 0.f, 0.f, 1.f),
+        .color_density_low = glm::dvec4(0.f, 1.f, 0.f, 1.f),
+        .color_density_high = glm::dvec4(0.f, 0.f, 1.f, 1.f)
 };
 
 const client_renderer client_renderer::default_renderer = {
@@ -19,8 +19,8 @@ const client_renderer client_renderer::default_renderer = {
         .graphics_window_enabled = true,
         .window_mode = e_window_mode::windowed,
         .display_index = -1,
-        .window_position = glm::vec2i(300, 200),
-        .window_size = glm::vec2i(800, 500),
+        .window_position = glm::i32vec2(300, 200),
+        .window_size = glm::i32vec2(800, 500),
         .style = visual_style::default_style
 };
 
@@ -61,7 +61,7 @@ std::expected<client_renderer, std::string> client_renderer::load(std::filesyste
                 cnf_cr.display_index = static_cast<std::int32_t>(ptr_di->get());
         }
 
-        auto read_vec2i = [&](std::string_view key, glm::vec2i& out) -> std::optional<std::string> {
+        auto read_vec2i = [&](std::string_view key, glm::i32vec2& out) -> std::optional<std::string> {
                 if (toml_cnf_cr->find(key) == toml_cnf_cr->end()) { // no key - no error
                         return std::nullopt;
                 }
@@ -96,7 +96,7 @@ std::expected<client_renderer, std::string> client_renderer::load(std::filesyste
         }
 
         if (const auto* toml_visual_style = toml_cnf_cr->get_as<toml::table>("visual_style")) {
-                auto read_color = [&](std::string_view key, glm::vec4d& out) -> std::optional<std::string> {
+                auto read_color = [&](std::string_view key, glm::dvec4& out) -> std::optional<std::string> {
                         if (toml_visual_style->find(key) == toml_visual_style->end()) { // no key - no error
                                 return std::nullopt;
                         }
@@ -119,7 +119,7 @@ std::expected<client_renderer, std::string> client_renderer::load(std::filesyste
                                 return std::format("client_renderer.visual_style.{}: r({}), g({}), b({}), a({})", key, !!r, !!g, !!b, !!a);
                         }
 
-                        out = glm::vec4d(r->get(), g->get(), b->get(), a->get());
+                        out = glm::dvec4(r->get(), g->get(), b->get(), a->get());
 
                         return std::nullopt;
                 };
@@ -142,7 +142,7 @@ std::expected<client_renderer, std::string> client_renderer::load(std::filesyste
 
 
 std::string client_renderer::to_string() const {
-        auto color_to_toml_arr = [](const glm::vec4d& in) -> std::string {
+        auto color_to_toml_arr = [](const glm::dvec4& in) -> std::string {
                 return std::format("[{}, {}, {}, {}]", in.x, in.y, in.z, in.w);
         };
 

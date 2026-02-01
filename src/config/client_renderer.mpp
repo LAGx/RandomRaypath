@@ -6,16 +6,7 @@
 #include <cstdint>
 export module ray.config;
 
-// pseudo glm
-export namespace glm {
-struct vec2i {
-        std::int32_t x, y;
-};
-struct vec4d {
-        double x, y, z, w;
-};
-};
-
+import glm;
 
 export namespace ray::config {
 
@@ -27,9 +18,9 @@ enum class e_window_mode : std::int8_t {
 };
 
 struct visual_style {
-        glm::vec4d color_nothing;
-        glm::vec4d color_density_low;
-        glm::vec4d color_density_high;
+        glm::dvec4 color_nothing;
+        glm::dvec4 color_density_low;
+        glm::dvec4 color_density_high;
 
         static const visual_style default_style;
 };
@@ -41,8 +32,8 @@ public:
         bool graphics_window_enabled;
         e_window_mode window_mode; // 0 - windowed, 1 - fullscreen
         std::int32_t display_index; // -1 - primary, actual index else
-        glm::vec2i window_position;
-        glm::vec2i window_size;
+        glm::i32vec2 window_position;
+        glm::i32vec2 window_size;
 
         visual_style style;
 
