@@ -10,7 +10,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(CMAKE_CXX_MODULE_STD OFF)
 
-option(RAY_GRAPHICS_ENABLE "Build graphics (Vulkan + GLFW)" ON)
+option(RAY_GRAPHICS_ENABLE "Build graphics (Vulkan + GLFW), enabling graphics namespace classes." ON)
 
 add_executable(RayClientRenderer)
 
@@ -55,7 +55,7 @@ target_include_directories(RayClientRenderer PRIVATE ${CMAKE_SOURCE_DIR}/third_p
 target_compile_definitions(RayClientRenderer
         PRIVATE
             TOML_EXCEPTIONS=0
-            RAY_GRAPHICS_ENABLE=$<BOOL:${RAY_GRAPHICS_ENABLE}>)
+            RAY_GRAPHICS_ENABLE=$<IF:$<BOOL:${RAY_GRAPHICS_ENABLE}>,1,0>)
 
 file(GLOB_RECURSE CORE_IMPL CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/src/*.cpp)
 file(GLOB_RECURSE CORE_MODULES CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/src/*.mpp)

@@ -4,6 +4,7 @@ export module ray.graphics.rhi;
 
 export namespace ray::graphics {
 
+#if RAY_GRAPHICS_ENABLE
 class renderer {
 public:
         renderer(GLFWwindow* basis_win);
@@ -18,4 +19,5 @@ public:
         VkInstance instance = VK_NULL_HANDLE;
         VkSurfaceKHR surface = VK_NULL_HANDLE;
 };
+#endif
 };

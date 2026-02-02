@@ -8,7 +8,7 @@ module ray.graphics.rhi;
 using namespace ray;
 using namespace ray::graphics;
 
-
+#if RAY_GRAPHICS_ENABLE
 renderer::renderer(GLFWwindow* basis_win) {
         if (basis_win == nullptr) {
                 std::println("vkCreateInstance failed. basis_win == nullptr.");
@@ -54,3 +54,5 @@ renderer::~renderer() {
                 vkDestroyInstance(instance, nullptr);
         }
 }
+
+#endif

@@ -24,6 +24,8 @@ public:
                 glm::i32vec2 window_size;
         };
 
+#if RAY_GRAPHICS_ENABLE
+
         window(const config& in_config);
         ~window();
 
@@ -38,5 +40,6 @@ private:
         config used_config;
         renderer* renderer_instance;
         GLFWwindow* gwin;
+#endif
 };
 };

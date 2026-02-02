@@ -9,6 +9,8 @@ module ray.graphics.window;
 using namespace ray;
 using namespace ray::graphics;
 
+#if RAY_GRAPHICS_ENABLE
+
 window::window(const config& in_config) {
         used_config = in_config;
 
@@ -57,3 +59,4 @@ window::~window() {
         glfwDestroyWindow(gwin);
         glfwTerminate();
 }
+#endif
