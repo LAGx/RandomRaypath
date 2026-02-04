@@ -7,6 +7,7 @@ import glm;
 export namespace ray::graphics {
 
 #if RAY_GRAPHICS_ENABLE
+
 class renderer {
 public:
         renderer(GLFWwindow* basis_win);

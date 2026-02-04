@@ -16,7 +16,7 @@ vec3 hsv2rgb(vec3 c) {
 
 void main() {
     float hue = fract(vUV.x + 0.15 * sin(pc.time));
-    float scan = 0.9 + 0.1 * sin(vUV.y * 600.0 + pc.time * 12.0);
+    float scan = 0.8 + 0.2 * sin(vUV.y * 400.0 + pc.time * 80.0);
     vec3 rgb = hsv2rgb(vec3(hue, 1.0, 1.0)) * scan;
     outColor = vec4(rgb, 1.0);
 }
