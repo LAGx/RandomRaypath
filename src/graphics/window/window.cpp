@@ -8,6 +8,15 @@ using namespace ray::graphics;
 
 #if RAY_GRAPHICS_ENABLE
 
+struct glfw_window_deleter {
+        void operator()(GLFWwindow* w) const {
+                if (w) {
+                        glfwDestroyWindow(w);
+                }
+        }
+};
+
+
 window::window(const config& in_config) {
         used_config = in_config;
 
@@ -38,19 +47,20 @@ window::window(const config& in_config) {
                 used_config.window_size.y = mode->height;
         }
 
-        gwin = glfwCreateWindow(used_config.window_size.x, used_config.window_size.y, "Random Raypath", monitor_ptr, nullptr);
+        GLFWwindow* gl_win_ptr = glfwCreateWindow(used_config.window_size.x, used_config.window_size.y, "Random Raypath", monitor_ptr, nullptr);
 
-        if (!gwin) {
+        if (!gl_win_ptr) {
                 std::printf("glfwCreateWindow failed.\n");
                 return;
         }
 
-        renderer_instance = new renderer(gwin);
+        gl_win = std::shared_ptr<GLFWwindow>( gl_win_ptr, glfw_window_deleter {} );
+        renderer_instance = std::make_unique<renderer>(gl_win);
 }
 
 
 void window::blocking_loop() {
-        if (!gwin) {
+        if (!gl_win) {
                 return;
         }
 
@@ -58,14 +68,16 @@ void window::blocking_loop() {
                 return;
         }
 
-        while (!glfwWindowShouldClose(gwin)) {
-                int w=0,h=0;
-                glfwGetFramebufferSize(gwin, &w, &h);
+        while (!glfwWindowShouldClose(gl_win.get())) {
+                int w = 0;
+                int h = 0;
+                glfwGetFramebufferSize(gl_win.get(), &w, &h);
 
                 if (w == 0 || h == 0) {
                         glfwWaitEvents();
                         continue;
                 }
+
                 glfwPollEvents();
                 renderer_instance->draw_frame();
         }
@@ -73,10 +85,8 @@ void window::blocking_loop() {
 
 
 window::~window() {
-        if (!!renderer_instance) {
-                delete renderer_instance;
-        }
-        glfwDestroyWindow(gwin);
+        renderer_instance.reset();
+        gl_win.reset();
         glfwTerminate();
 }
 #endif

@@ -2,6 +2,8 @@
 #include "../graphic_libs.h"
 #include "glm/glm.hpp"
 
+#include <memory>
+
 
 namespace ray::graphics {
 
@@ -9,13 +11,13 @@ namespace ray::graphics {
 
 class renderer {
 public:
-        renderer(GLFWwindow* basis_win);
+        renderer(std::weak_ptr<GLFWwindow> basis_win);
         ~renderer();
 
         renderer(const renderer&) = delete;
         renderer& operator=(const renderer&) = delete;
-        renderer(renderer&&) = default;
-        renderer& operator=(renderer&&) = default;
+        renderer(renderer&&) noexcept = default;
+        renderer& operator=(renderer&&) noexcept = default;
 
         void draw_frame();
 
@@ -64,7 +66,7 @@ private:
                 VkMemoryPropertyFlags props, VkBuffer& outBuf, VkDeviceMemory& outMem);
 
 private:
-        GLFWwindow* win = nullptr;
+        std::weak_ptr<GLFWwindow> gl_window;
 
         VkInstance instance = VK_NULL_HANDLE;
         VkSurfaceKHR surface = VK_NULL_HANDLE;
@@ -82,9 +84,9 @@ private:
         VkFormat swapchain_format = VK_FORMAT_UNDEFINED;
         VkExtent2D swapchain_extent{};
 
-        VkImage* swapchain_images = nullptr;
+        std::vector<VkImage> swapchain_images;
         glm::u32 swapchain_image_count = 0;
-        VkImageView* swapchain_image_views = nullptr;
+        std::vector<VkImageView> swapchain_image_views;
 
         VkRenderPass render_pass = VK_NULL_HANDLE;
 

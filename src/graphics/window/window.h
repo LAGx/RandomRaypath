@@ -4,6 +4,8 @@
 
 #include "glm/glm.hpp"
 
+#include <memory>
+
 namespace ray::graphics {
 
 enum class e_window_mode : glm::i8 {
@@ -29,15 +31,15 @@ public:
 
         window(const window&) = delete;
         window& operator=(const window&) = delete;
-        window(window&&) = default;
-        window& operator=(window&&) = default;
+        window(window&&) noexcept = default;
+        window& operator=(window&&) noexcept = default;
 
         void blocking_loop();
 
 private:
         config used_config;
-        renderer* renderer_instance;
-        GLFWwindow* gwin;
+        std::shared_ptr<renderer> renderer_instance; // ownner
+        std::shared_ptr<GLFWwindow> gl_win;
 #endif
 };
 };

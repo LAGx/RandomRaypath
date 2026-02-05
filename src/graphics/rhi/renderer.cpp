@@ -19,10 +19,10 @@ static uint64_t now_ticks_ns() {
         ).count();
 }
 
-renderer::renderer(GLFWwindow* basis_win) {
-        win = basis_win;
+renderer::renderer(std::weak_ptr<GLFWwindow> basis_win)
+        : gl_window(std::move(basis_win)) {
 
-        if (win == nullptr) {
+        if (gl_window.expired()) {
                 std::println("renderer: basis_win == nullptr");
                 return;
         }
@@ -39,6 +39,7 @@ renderer::renderer(GLFWwindow* basis_win) {
 
         start_ticks = now_ticks_ns();
 }
+
 
 renderer::~renderer() {
         destroy();
@@ -276,14 +277,18 @@ bool renderer::create_surface() {
                 return false;
         }
 
-        if (instance == VK_NULL_HANDLE || !win) {
-                std::println("renderer: create_surface instance or win is null.");
+        if (instance == VK_NULL_HANDLE) {
+                std::println("renderer: create_surface instance is null.");
                 return false;
         }
 
-        if (glfwCreateWindowSurface(instance, win, nullptr, &surface) != VK_SUCCESS) {
-                std::println("renderer: glfwCreateWindowSurface failed");
-                return false;
+        if (auto window_lock = gl_window.lock()) {
+                if (glfwCreateWindowSurface(instance, window_lock.get(), nullptr, &surface) != VK_SUCCESS) {
+                        std::println("renderer: glfwCreateWindowSurface failed");
+                        return false;
+                }
+        } else {
+                std::println("renderer: create_surface gl_window is null.");
         }
 
         return surface != VK_NULL_HANDLE;
@@ -548,15 +553,17 @@ bool renderer::create_swapchain() {
         VkExtent2D extent = caps.currentExtent;
         if (extent.width == 0xFFFFFFFFu) {
                 int w = 0, h = 0;
-                glfwGetFramebufferSize(win, &w, &h);
+                if (auto window_lock = gl_window.lock()) {
+                        glfwGetFramebufferSize(window_lock.get(), &w, &h);
+                }
 
                 if (w == 0 || h == 0) {
-                        std::println("renderer: glfwGetFramebufferSize return 0, 0 surface size.");
+                        std::println("renderer: gl_window({}), glfwGetFramebufferSize return 0, 0 surface size.", gl_window.expired() ? "null" : "present");
                         return false;
                 }
 
-                extent.width = (uint32_t)w;
-                extent.height = (uint32_t)h;
+                extent.width = static_cast<glm::u32>(w);
+                extent.height = static_cast<glm::u32>(h);
                 extent.width = std::max(caps.minImageExtent.width, std::min(caps.maxImageExtent.width, extent.width));
                 extent.height = std::max(caps.minImageExtent.height, std::min(caps.maxImageExtent.height, extent.height));
         }
@@ -613,10 +620,13 @@ bool renderer::create_swapchain() {
         swapchain_extent = extent;
 
         vkGetSwapchainImagesKHR(device, swapchain, &swapchain_image_count, nullptr);
-        swapchain_images = new VkImage[swapchain_image_count];
-        vkGetSwapchainImagesKHR(device, swapchain, &swapchain_image_count, swapchain_images);
+        assert(swapchain_images.empty());
+        swapchain_images.resize(swapchain_image_count, {VK_NULL_HANDLE});
+        vkGetSwapchainImagesKHR(device, swapchain, &swapchain_image_count, swapchain_images.data());
 
-        swapchain_image_views = new VkImageView[swapchain_image_count];
+        assert(swapchain_image_views.empty());
+        swapchain_image_views.resize(swapchain_image_count, {VK_NULL_HANDLE});
+
         for (glm::u32 i = 0; i < swapchain_image_count; ++i) {
                 VkImageViewCreateInfo image_view_ci{ VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
                 image_view_ci.image = swapchain_images[i];
@@ -644,27 +654,30 @@ bool renderer::create_swapchain() {
 
 
 void renderer::destroy_swapchain() {
-    if (device == VK_NULL_HANDLE) return;
-
-    if (swapchain_image_views) {
-        for (uint32_t i = 0; i < swapchain_image_count; ++i) {
-            if (swapchain_image_views[i] != VK_NULL_HANDLE) {
-                vkDestroyImageView(device, swapchain_image_views[i], nullptr);
-            }
+        if (device == VK_NULL_HANDLE) {
+                swapchain_image_views.resize(0);
+                swapchain_images.resize(0);
+                return;
         }
-        delete[] swapchain_image_views;
-        swapchain_image_views = nullptr;
-    }
 
-    if (swapchain_images) {
-        delete[] swapchain_images;
-        swapchain_images = nullptr;
-    }
+        for (auto& image_view : swapchain_image_views) {
+                if (image_view != VK_NULL_HANDLE) {
+                        vkDestroyImageView(device, image_view, nullptr);
+                }
+        }
+        swapchain_image_views.resize(0);
 
-    if (swapchain != VK_NULL_HANDLE) {
-        vkDestroySwapchainKHR(device, swapchain, nullptr);
-        swapchain = VK_NULL_HANDLE;
-    }
+        for (auto& image : swapchain_images) {
+                if (image != VK_NULL_HANDLE) {
+                        vkDestroyImage(device, image, nullptr);
+                }
+        }
+        swapchain_images.resize(0);
+
+        if (swapchain != VK_NULL_HANDLE) {
+                vkDestroySwapchainKHR(device, swapchain, nullptr);
+                swapchain = VK_NULL_HANDLE;
+        }
 }
 
 
@@ -1043,7 +1056,9 @@ void renderer::destroy_sync() {
 void renderer::recreate_swapchain() {
         int w = 0, h = 0;
 
-        glfwGetFramebufferSize(win, &w, &h);
+        if (auto window_lock = gl_window.lock()) {
+                glfwGetFramebufferSize(window_lock.get(), &w, &h);
+        }
 
         if (w == 0 || h == 0) {
                 return;
