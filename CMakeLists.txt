@@ -2,7 +2,7 @@
 
 #set(CMAKE_EXPERIMENTAL_CXX_IMPORT_STD "d0edc3af-4c50-42ea-a356-e2862fe7a444")
 
-option(DEBUG_NO_OPT "Enable debug build options." OFF)
+option(DEBUG_NO_OPT "Enable debug build options." ON)
 
 if(DEBUG_NO_OPT)
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "" FORCE)

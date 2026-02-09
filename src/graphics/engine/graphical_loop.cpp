@@ -9,6 +9,8 @@
 using namespace ray;
 using namespace ray::graphics;
 
+#if RAY_GRAPHICS_ENABLE
+
 struct render_thread {
         render_thread(config::client_renderer in_config)
                 : cfg(std::move(in_config)) {}
@@ -16,26 +18,23 @@ struct render_thread {
         void operator()(std::stop_token stop_t) const {
                 window win(cfg.window);
                 renderer rend(win.get_gl_window());
-                scene_logic logic;
+                scene_logic logic(win, rend);
 
                 while (!stop_t.stop_requested()) {
-                        if (!tick(win, rend)) {
-                                break;
-                        }
-
-                        if (!logic.tick(win, rend)) {
+                        if (!tick(win, rend, logic)) {
                                 break;
                         }
                 }
+
+                logic.cleanup(win, rend);
         }
 
         config::client_renderer cfg;
 
 private:
-        static bool tick(window& win, renderer& rend) {
+        static bool tick(window& win, renderer& rend, scene_logic& logic) {
                 bool valid_view = false;
                 const bool window_success = win.draw_window(valid_view);
-
                 if (!window_success) {
                         return false;
                 }
@@ -44,9 +43,17 @@ private:
                         return true;
                 }
 
-                const bool render_success = rend.draw_frame();
+                const bool logic_success = logic.tick(win, rend);
+                if (!logic_success) {
+                        return false;
+                }
 
-                return render_success;
+                const bool render_success = rend.draw_frame();
+                if (!render_success) {
+                        return false;
+                }
+
+                return true;
         }
 };
 
@@ -79,3 +86,4 @@ void async_graphical_loop::wait_blocking(){
                 worker_t.join();
         }
 }
+#endif

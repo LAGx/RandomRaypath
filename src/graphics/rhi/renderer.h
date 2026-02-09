@@ -1,16 +1,14 @@
 ﻿#pragma once
 #include "g_app_driver.h"
-#include "../graphic_libs.h"
+#include "graphics/graphic_libs.h"
 #include "glm/glm.hpp"
-
+#include "pipeline/pipeline_manager.h"
 #include <memory>
 
 
 namespace ray::graphics {
 
 #if RAY_GRAPHICS_ENABLE
-
-
 
 class renderer {
 public:
@@ -24,12 +22,9 @@ public:
 
         bool draw_frame();
 
-private:
-        struct vertex {
-                float pos[2];
-                float uv[2];
-        };
+        pipeline_manager pipe;
 
+private:
         bool create();
         void destroy();
 
@@ -39,12 +34,6 @@ private:
         bool create_swapchain();
         void destroy_swapchain();
 
-        bool create_pipeline();
-        void destroy_pipeline();
-
-        bool create_buffers();
-        void destroy_buffers();
-
         bool create_commands();
         void destroy_commands();
 
@@ -52,12 +41,6 @@ private:
         void destroy_sync();
 
         void recreate_swapchain();
-
-        VkShaderModule create_shader_module_from_file(const char* path);
-
-        glm::u32 find_memory_type(glm::u32 typeBits, VkMemoryPropertyFlags props);
-        bool create_buffer(VkDeviceSize size, VkBufferUsageFlags usage,
-                VkMemoryPropertyFlags props, VkBuffer& outBuf, VkDeviceMemory& outMem);
 
 private:
         std::weak_ptr<GLFWwindow> gl_window;
@@ -73,14 +56,6 @@ private:
         glm::u32 swapchain_image_count = 0;
         std::vector<VkImageView> swapchain_image_views;
 
-        VkPipelineLayout pipeline_layout = VK_NULL_HANDLE;
-        VkPipeline pipeline = VK_NULL_HANDLE;
-
-        VkBuffer vbuf = VK_NULL_HANDLE;
-        VkDeviceMemory vmem = VK_NULL_HANDLE;
-        VkBuffer ibuf = VK_NULL_HANDLE;
-        VkDeviceMemory imem = VK_NULL_HANDLE;
-
         VkCommandPool cmd_pool = VK_NULL_HANDLE;
 
         static constexpr glm::u32 k_frames_in_flight = 2;
@@ -91,8 +66,6 @@ private:
         VkFence in_flight[k_frames_in_flight]{};
         glm::u8 frame_submitted[k_frames_in_flight] = {0};
         glm::u32 frame_index = 0;
-
-        glm::u64 start_ticks = 0;
 };
 
 #endif

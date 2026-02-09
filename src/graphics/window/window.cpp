@@ -64,6 +64,8 @@ window::window(const config& in_config)
                 used_config.window_size.y = mode->height;
         }
 
+        // BUG TODO: actually, it will work only in the same thread for multi-window.
+        // to use it with multiple graphical loop, you need multi-window thread single-owner or single-thread loop multi-window implementation instead of async_graphical_loop
         GLFWwindow* gl_win_ptr = glfwCreateWindow(used_config.window_size.x, used_config.window_size.y, "Random Raypath", monitor_ptr, nullptr);
 
         if (!gl_win_ptr) {
