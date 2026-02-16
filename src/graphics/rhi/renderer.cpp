@@ -131,7 +131,7 @@ bool renderer::draw_frame() {
         rect_scissor.extent = swapchain_extent;
         vkCmdSetScissor(command_buffer, 0, 1, &rect_scissor);
 
-        pipe.renderer_perform_draw(command_buffer);
+        pipe.renderer_perform_draw(command_buffer, frame_index);
 
         vkCmdEndRendering(command_buffer);
 
@@ -177,7 +177,7 @@ bool renderer::draw_frame() {
 
         vkQueuePresentKHR(present_queue, &present_info);
 
-        frame_index = (frame_index + 1) % k_frames_in_flight;
+        frame_index = (frame_index + 1) % g_app_driver::k_frames_in_flight;
 
         return true;
 }
@@ -406,7 +406,7 @@ bool renderer::create_swapchain() {
                 }
         }
 
-        pipe.renderer_set_swapchain_format(swapchain_format);
+        pipe.renderer_set_swapchain_format(swapchain_format, glm::uvec2 {swapchain_extent.width, swapchain_extent.height});
 
         return true;
 }
@@ -456,7 +456,7 @@ bool renderer::create_commands() {
         VkCommandBufferAllocateInfo buffer_allocate_info{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
         buffer_allocate_info.commandPool = cmd_pool;
         buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        buffer_allocate_info.commandBufferCount = k_frames_in_flight;
+        buffer_allocate_info.commandBufferCount = g_app_driver::k_frames_in_flight;
 
         if (vkAllocateCommandBuffers(device, &buffer_allocate_info, cmd) != VK_SUCCESS) {
                 std::println("renderer: vkAllocateCommandBuffers failed");
@@ -488,7 +488,7 @@ bool renderer::create_sync() {
         VkFenceCreateInfo fence_cinf{ VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
         fence_cinf.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-        for (uint32_t i = 0; i < k_frames_in_flight; ++i) {
+        for (uint32_t i = 0; i < g_app_driver::k_frames_in_flight; ++i) {
                 vkCreateSemaphore(device, &semaphore_cinf, nullptr, &image_available[i]);
                 vkCreateSemaphore(device, &semaphore_cinf, nullptr, &render_finished[i]);
                 vkCreateFence(device, &fence_cinf, nullptr, &in_flight[i]);
@@ -503,7 +503,7 @@ void renderer::destroy_sync() {
                 return;
         }
 
-        for (glm::u32 i = 0; i < k_frames_in_flight; ++i) {
+        for (glm::u32 i = 0; i < g_app_driver::k_frames_in_flight; ++i) {
                 if (image_available[i]) {
                         vkDestroySemaphore(device, image_available[i], nullptr);
                 }

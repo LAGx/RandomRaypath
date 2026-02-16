@@ -8,37 +8,35 @@ using namespace ray::graphics;
 
 #if RAY_GRAPHICS_ENABLE
 
-void pipeline_manager::renderer_set_swapchain_format(VkFormat in_swapchain_format) {
-        swapchain_format = std::move(in_swapchain_format);
-}
 
-/*
-void pipeline_manager::perform_draw(VkCommandBuffer command_buffer) {
-        if (!pipeline_obj) {
-                return;
+void pipeline_manager::renderer_set_swapchain_format(VkFormat in_swapchain_format, glm::uvec2 in_resolution) {
+        swapchain_format = in_swapchain_format;
+        resolution = in_resolution;
+
+        for (auto& pipe : pipe_instances) {
+                if (pipe) {
+                        pipe->update_swapchain(in_swapchain_format, resolution);
+                }
         }
-
-        pipeline_obj->draw_commands(command_buffer);
-}
-
-bool pipeline_manager::create_pipeline(VkFormat swapchain_format) {
-        pipeline_obj = std::make_unique<pipeline>(swapchain_format);
-
-        if (!pipeline_obj) {
-                return false;
-        }
-
-        if (!pipeline_obj->init_ok) {
-                pipeline_obj.reset();
-                return false;
-        }
-
-        return true;
 }
 
 
-void pipeline_manager::destroy_pipeline () {
-        pipeline_obj.reset();
-}*/
+void pipeline_manager::renderer_perform_draw(VkCommandBuffer command_buffer, glm::u32 frame_index) {
+        for (auto& pipe : pipe_instances) {
+                if (pipe) {
+                        pipe->draw_commands(command_buffer, frame_index);
+                }
+        }
+}
+
+
+void pipeline_manager::renderer_shutdown() {
+        pipe_instances.clear();
+}
+
+
+glm::uvec2 pipeline_manager::get_target_resolution() const {
+        return resolution;
+}
 
 #endif

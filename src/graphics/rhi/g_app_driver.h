@@ -1,6 +1,8 @@
 ﻿#pragma once
 #include "../graphic_libs.h"
 #include "glm/fwd.hpp"
+#include "glm/vec2.hpp"
+
 #include <atomic>
 #include <memory>
 #include <mutex>
@@ -9,6 +11,8 @@ namespace ray::graphics {
 #if RAY_GRAPHICS_ENABLE
 
 struct g_app_driver {
+        static constexpr glm::u32 k_frames_in_flight = 2;
+
         struct driver_handler {
                 g_app_driver* g_handler = nullptr;
                 void try_init_with_surface(VkSurfaceKHR surface);

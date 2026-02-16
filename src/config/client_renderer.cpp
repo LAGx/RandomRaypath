@@ -21,7 +21,8 @@ const client_renderer client_renderer::default_renderer = {
                 .graphics_window_enabled = true,
                 .window_mode = graphics::e_window_mode::windowed,
                 .window_position = glm::i32vec2(300, 200),
-                .window_size = glm::i32vec2(800, 500)
+                .window_size = glm::i32vec2(800, 500),
+                .zoom_speed = 0.1f
         },
         .style = visual_style::default_style
 };
@@ -92,6 +93,9 @@ std::expected<client_renderer, std::string> client_renderer::load(std::filesyste
         if (auto err = read_vec2i("window_size", cnf_cr.window.window_size)) {
                 return std::unexpected(*err);
         }
+        if (const auto ptr_zoom_f = toml_cnf_cr->get_as<double>("zoom_speed")) {
+                cnf_cr.window.zoom_speed = (glm::f32)ptr_zoom_f->get();
+        }
 
         if (const auto* toml_visual_style = toml_cnf_cr->get_as<toml::table>("visual_style")) {
                 auto read_color = [&](std::string_view key, glm::dvec4& out) -> std::optional<std::string> {
@@ -151,6 +155,7 @@ std::string client_renderer::to_string() const {
         "window_mode = {}\n"
         "window_position = [{}, {}]\n"
         "window_size = [{}, {}]\n\n"
+        "zoom_speed = {}\n"
         "[client_renderer.visual_style]\n"
         "color_nothing = \"{}\"\n"
         "color_density_low = \"{}\"\n"
@@ -160,6 +165,7 @@ std::string client_renderer::to_string() const {
         static_cast<int>(window.window_mode),
         window.window_position.x, window.window_position.y,
         window.window_size.x, window.window_size.y,
+        window.zoom_speed,
         color_to_toml_arr(style.color_nothing),
         color_to_toml_arr(style.color_density_low),
         color_to_toml_arr(style.color_density_high));

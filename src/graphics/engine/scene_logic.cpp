@@ -1,13 +1,9 @@
 ﻿#include "scene_logic.h"
 #include "graphics/window/window.h"
 #include "graphics/rhi/renderer.h"
+#include "utils/ray_time.h"
 
-
-static uint64_t now_ticks_ns() {
-        return (uint64_t)std::chrono::duration_cast<std::chrono::nanoseconds>(
-                std::chrono::steady_clock::now().time_since_epoch()
-        ).count();
-}
+#include <thread>
 
 
 using namespace ray;
@@ -16,6 +12,9 @@ using namespace ray::graphics;
 #if RAY_GRAPHICS_ENABLE
 
 scene_logic::scene_logic(window& win, renderer& rend) {
+        last_time_ns = now_ticks_ns();
+        last_delta_time_ns = 0;
+
         pipeline_handle<rainbow_rect_pipeline> rainbow_pipeline = rend.pipe.create_pipeline<rainbow_rect_pipeline>();
         pipeline_handle<solid_rect_pipeline> rect_pipeline = rend.pipe.create_pipeline<solid_rect_pipeline>();
 
@@ -30,8 +29,6 @@ scene_logic::scene_logic(window& win, renderer& rend) {
 
         world_pipelines.push_back(rainbow_pipeline);
         world_pipelines.push_back(rect_pipeline);
-
-        time_pipelines.push_back(rainbow_pipeline);
 
         rainbow_1_screen = rend.pipe.create_draw_obj<rainbow_rect_pipeline>(rainbow_pipeline);
         rainbow_2_world = rend.pipe.create_draw_obj<rainbow_rect_pipeline>(rainbow_pipeline);
@@ -75,40 +72,44 @@ scene_logic::scene_logic(window& win, renderer& rend) {
         }
 }
 
+
 bool scene_logic::tick(window& win, renderer& rend) {
         {
-                const int kek_antispeed = 100;
-                delta_kek = sin(++i / kek_antispeed) * 20;
+                glm::u64 curr_time_ns = now_ticks_ns();
+                last_delta_time_ns = curr_time_ns - last_time_ns;
+                last_time_ns = curr_time_ns;
+
+                //std::this_thread::sleep_for(std::chrono::milliseconds(50));
+                //if ((last_time_ns % 1'000'000) == 0) {
+                //        std::chrono::duration<glm::u64, std::nano> ns_duration {last_delta_time_ns};
+                //        double sec_duration = std::chrono::duration_cast<std::chrono::duration<double>>(ns_duration).count();
+                //        double fps = 1.f / sec_duration;
+                //        std::println("delta ns: {}, fps: {}", last_delta_time_ns, fps);
+                //}
         }
 
-        // update camera
+        tick_camera_movement(win, rend);
+
         for (auto& world_pipeline : world_pipelines) {
                 auto world_data = rend.pipe.access_pipeline_data(world_pipeline);
                 if (!world_data) {
                         return false;
                 }
 
-                world_data->camera_transform = glm::vec4(); //TODO: camera logic
-        }
+                glm::u64 last_time_ms = last_time_ns / 1'000'000;
+                world_data->time_ms = static_cast<glm::u32>(last_time_ms);
 
-        // update time
-        for (auto& time_pipeline : time_pipelines) {
-                auto time_data = rend.pipe.access_pipeline_data(time_pipeline);
-                if (!time_data) {
-                        return false;
-                }
-
-                time_data->time_ms = delta_kek; //TODO: proper time
+                world_data->camera_transform = camera_transform;
         }
 
         if (auto rect_3_dyn_screen_data = rend.pipe.access_draw_obj_data(rect_3_dyn_screen)) {
-                rect_3_dyn_screen_data->transform = transform_dyn_3 + delta_kek;
+                rect_3_dyn_screen_data->transform = transform_dyn_3;
         } else {
                 return false;
         }
 
         if (auto rect_4_dyn_world_data = rend.pipe.access_draw_obj_data(rect_4_dyn_world)) {
-                rect_4_dyn_world_data->transform = transform_dyn_4 + delta_kek;
+                rect_4_dyn_world_data->transform = transform_dyn_4;
         } else {
                 return false;
         }
@@ -121,6 +122,45 @@ void scene_logic::cleanup(window& win, renderer& rend) {
         for (auto p : all_pipelines) {
                 rend.pipe.destroy_pipeline(p);
         }
+}
+
+
+void scene_logic::tick_camera_movement(window& win, renderer& rend) {
+        glm::vec2 curr_mouse_pos = win.get_mouse_position();
+        glm::f32 delta_zoom = win.get_mouse_wheel_delta();
+
+        if (std::abs(delta_zoom) > 0.0001) {
+                glm::vec2 viewport_px = (glm::vec2)rend.pipe.get_target_resolution();
+                glm::vec2 world_mouse_before = (curr_mouse_pos - viewport_px * 0.5f) * (2.0f / camera_transform.z);
+
+                delta_zoom = std::exp(delta_zoom);
+                camera_transform.z *= delta_zoom;
+                camera_transform.z = std::clamp(camera_transform.z, 0.004f, 120.f);
+
+                glm::vec2 world_mouse_after = (curr_mouse_pos - viewport_px * 0.5f) * (2.0f / camera_transform.z);
+
+                glm::vec2 delta_zoom_move = world_mouse_before - world_mouse_after;
+
+                camera_transform.x += delta_zoom_move.x;
+                camera_transform.y += delta_zoom_move.y;
+        }
+
+        glm::vec2 delta_move = glm::vec2(0, 0);
+        if (win.get_mouse_button_right()) {
+                if (base_move_position) {
+                        delta_move = *base_move_position - curr_mouse_pos;
+                }
+                base_move_position = curr_mouse_pos;
+        }
+        else {
+                base_move_position = std::nullopt;
+        }
+
+        delta_move /= camera_transform.z;
+        delta_move *= 2;
+
+        camera_transform.x += delta_move.x;
+        camera_transform.y += delta_move.y;
 }
 
 

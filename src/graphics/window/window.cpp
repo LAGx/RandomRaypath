@@ -34,6 +34,8 @@ struct glfw_runtime_init {
                         std::printf("glfwInit failed.\n");
                 }
         }
+
+
 };
 
 
@@ -74,6 +76,15 @@ window::window(const config& in_config)
         }
 
         gl_win = std::shared_ptr<GLFWwindow>( gl_win_ptr, glfw_window_deleter {} );
+
+        glfwSetWindowUserPointer(gl_win_ptr, this);
+        mouse_wheel_delta_frame = 0;
+        glfwSetScrollCallback(gl_win_ptr, glfw_mouse_scroll_callback);
+
+        glfwSetInputMode(gl_win_ptr, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+
+        glfw_alloc_cursors();
+        set_mouse_cursor(e_mouse_cursor::arrow_pointer);
 }
 
 
@@ -98,6 +109,7 @@ bool window::draw_window(bool& out_valid_view) {
                 }
         }
 
+        mouse_wheel_delta_frame = 0;
         glfwPollEvents();
 
         out_valid_view = true;
@@ -105,12 +117,83 @@ bool window::draw_window(bool& out_valid_view) {
         return true;
 }
 
+
 std::weak_ptr<GLFWwindow> window::get_gl_window() const {
         return gl_win;
 }
 
 
+glm::vec2 window::get_mouse_position() const {
+        double x_pos = 0, y_pos = 0;
+        if (gl_win) {
+                glfwGetCursorPos(gl_win.get(), &x_pos, &y_pos);
+        }
+        return {x_pos, y_pos};
+}
+
+
+bool window::get_mouse_button_left() const {
+        int state = GLFW_RELEASE;
+        if (gl_win) {
+                state = glfwGetMouseButton(gl_win.get(), GLFW_MOUSE_BUTTON_LEFT);
+        }
+        return state == GLFW_PRESS;
+}
+
+
+bool window::get_mouse_button_right() const {
+        int state = GLFW_RELEASE;
+        if (gl_win) {
+                state = glfwGetMouseButton(gl_win.get(), GLFW_MOUSE_BUTTON_RIGHT);
+        }
+        return state == GLFW_PRESS;
+}
+
+
+glm::f64 window::get_mouse_wheel_delta() const {
+        return mouse_wheel_delta_frame * used_config.zoom_speed;
+}
+
+
+void window::set_mouse_cursor(e_mouse_cursor in_type){
+        assert(in_type < e_mouse_cursor::count);
+
+        GLFWcursor* cursor = glfw_hot_cursors[(int)in_type];
+        if (gl_win && !!cursor) {
+                glfwSetCursor(gl_win.get(), cursor);
+        }
+}
+
+
+void window::glfw_mouse_scroll_callback(GLFWwindow *glfw_win, double x_offset, double y_offset) {
+        window* instance = static_cast<window*>(glfwGetWindowUserPointer(glfw_win));
+
+        if (instance) {
+                instance->mouse_wheel_delta_frame += y_offset; // y is mouse wheel
+        }
+}
+
+
+void window::glfw_alloc_cursors(){
+        glfw_hot_cursors[(int)e_mouse_cursor::arrow_pointer] = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);
+        glfw_hot_cursors[(int)e_mouse_cursor::move_hand] = glfwCreateStandardCursor(GLFW_RESIZE_ALL_CURSOR);
+}
+
+
+void window::glfw_dealloc_cursors(){
+        for (int i = 0; i < (int)e_mouse_cursor::count; i++) {
+                GLFWcursor* cursor = glfw_hot_cursors[i];
+                if (!!cursor) {
+                        glfwDestroyCursor(cursor);
+                }
+
+                glfw_hot_cursors[i] = nullptr;
+        }
+}
+
+
 window::~window() {
+        glfw_dealloc_cursors();
         gl_win.reset();
         // glfwTerminate(); OS will handle it on close
 }

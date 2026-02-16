@@ -28,7 +28,7 @@ struct pipeline_handle {
         pipeline_handle() = default;
 
         bool is_valid() const { return !obj_ptr.expired(); }
-        operator bool () const { return is_valid(); }
+        operator bool() const { return is_valid(); }
 
         template<typename OtherPipeline>
         requires ValidPipelineModelUpcastable<Pipeline, OtherPipeline>
@@ -49,7 +49,7 @@ struct draw_obj_handle {
         draw_obj_handle() = default;
 
         bool is_valid() const { return obj_index.id != UINT64_MAX && pipe_handle.is_valid(); }
-        operator bool () const { return is_valid(); }
+        operator bool() const { return is_valid(); }
 
         template<typename OtherPipeline>
         requires ValidPipelineModelUpcastable<Pipeline, OtherPipeline>
@@ -57,14 +57,13 @@ struct draw_obj_handle {
             : pipe_handle(other.pipe_handle), obj_index(other.obj_index) {}
 };
 
-
 struct i_pipeline_data_model {
         struct pipeline { // POD type
-                bool need_update = false;
+                bool need_update = true; // init update true
         };
 
         struct draw_obj { // POD type
-                bool need_update = false;
+                bool need_update = true; // init update true
                 draw_obj_id id = UINT64_MAX;
         };
 };
@@ -86,12 +85,12 @@ public:
 
         i_pipeline() = delete;
 
-        i_pipeline(std::weak_ptr<index_pool> in_index_pool, VkFormat in_swapchain_format)
-                : obj_index_pool(std::move(in_index_pool)), swapchain_format(in_swapchain_format) {}
-        virtual ~i_pipeline() {}
+        i_pipeline(std::weak_ptr<index_pool> in_index_pool, VkFormat in_swapchain_format, glm::uvec2 in_resolution)
+                : obj_index_pool(std::move(in_index_pool)), swapchain_format(in_swapchain_format), resolution(in_resolution) {}
+        virtual ~i_pipeline() = default;
 
-        virtual void draw_commands(VkCommandBuffer command_buffer) = 0;
-        virtual void update_swapchain(VkFormat swapchain_format) = 0;
+        virtual void draw_commands(VkCommandBuffer command_buffer, glm::u32 frame_index) = 0;
+        virtual void update_swapchain(VkFormat swapchain_format, glm::uvec2 resolution) = 0;
 
         draw_obj_handle_id create_draw_obj() {
                 return add_new_draw_obj();
@@ -122,7 +121,8 @@ protected:
         virtual void remove_draw_obj(draw_obj_handle_id to_remove) = 0;
 
         std::weak_ptr<index_pool> obj_index_pool;
-        VkFormat swapchain_format;
+        VkFormat swapchain_format = VK_FORMAT_UNDEFINED;
+        glm::uvec2 resolution = glm::uvec2(1);
 };
 
 

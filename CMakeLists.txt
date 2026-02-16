@@ -2,9 +2,9 @@
 
 #set(CMAKE_EXPERIMENTAL_CXX_IMPORT_STD "d0edc3af-4c50-42ea-a356-e2862fe7a444")
 
-option(DEBUG_NO_OPT "Enable debug build options." ON)
+option(RAY_DEBUG_NO_OPT "Enable debug build options." ON)
 
-if(DEBUG_NO_OPT)
+if(RAY_DEBUG_NO_OPT)
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "" FORCE)
     set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g3 -fno-omit-frame-pointer -fno-inline" CACHE STRING "" FORCE)
     set(CMAKE_C_FLAGS_DEBUG   "-O0 -g3 -fno-omit-frame-pointer -fno-inline" CACHE STRING "" FORCE)
@@ -61,6 +61,7 @@ target_compile_definitions(RayClientRenderer
         PRIVATE
             TOML_EXCEPTIONS=0
             RAY_GRAPHICS_ENABLE=$<IF:$<BOOL:${RAY_GRAPHICS_ENABLE}>,1,0>
+            RAY_DEBUG_NO_OPT=$<IF:$<BOOL:${RAY_DEBUG_NO_OPT}>,1,0>
             GLM_FORCE_RADIANS
             GLM_FORCE_DEPTH_ZERO_TO_ONE)
 

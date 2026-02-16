@@ -10,6 +10,8 @@ namespace ray::graphics {
 
 #if RAY_GRAPHICS_ENABLE
 
+// This render does not apply any graphical smoothing like antialiasing or anisotropic filtering intentionally.
+// The goal is to achieve 2d editor crisp feeling.
 class renderer {
 public:
         renderer(std::weak_ptr<GLFWwindow> basis_win);
@@ -50,7 +52,7 @@ private:
 
         VkSwapchainKHR swapchain = VK_NULL_HANDLE;
         VkFormat swapchain_format = VK_FORMAT_UNDEFINED;
-        VkExtent2D swapchain_extent{};
+        VkExtent2D swapchain_extent {};
 
         std::vector<VkImage> swapchain_images;
         glm::u32 swapchain_image_count = 0;
@@ -58,13 +60,12 @@ private:
 
         VkCommandPool cmd_pool = VK_NULL_HANDLE;
 
-        static constexpr glm::u32 k_frames_in_flight = 2;
-        VkCommandBuffer cmd[k_frames_in_flight]{};
+        VkCommandBuffer cmd[g_app_driver::k_frames_in_flight] {};
 
-        VkSemaphore image_available[k_frames_in_flight]{};
-        VkSemaphore render_finished[k_frames_in_flight]{};
-        VkFence in_flight[k_frames_in_flight]{};
-        glm::u8 frame_submitted[k_frames_in_flight] = {0};
+        VkSemaphore image_available[g_app_driver::k_frames_in_flight] {};
+        VkSemaphore render_finished[g_app_driver::k_frames_in_flight] {};
+        VkFence in_flight[g_app_driver::k_frames_in_flight]{};
+        glm::u8 frame_submitted[g_app_driver::k_frames_in_flight] = {0};
         glm::u32 frame_index = 0;
 };
 

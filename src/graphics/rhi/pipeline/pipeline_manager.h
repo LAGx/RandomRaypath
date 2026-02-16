@@ -13,18 +13,24 @@ namespace ray::graphics {
 
 class pipeline_manager {
 public:
-        void renderer_set_swapchain_format(VkFormat in_swapchain_format); //TODO: notify pipelines, need for window resize
-        void renderer_perform_draw(VkCommandBuffer command_buffer) {}
-        void renderer_shutdown() {}
+        void renderer_set_swapchain_format(VkFormat in_swapchain_format, glm::uvec2 in_resolution);
+        void renderer_perform_draw(VkCommandBuffer command_buffer, glm::u32 frame_index);
+        void renderer_shutdown();
+
+        glm::uvec2 get_target_resolution() const;
+
+        ~pipeline_manager() {
+                renderer_shutdown();
+        }
 
         template<class Pipeline>
         pipeline_handle<Pipeline> create_pipeline() {
-                auto pipe = std::make_shared<Pipeline>(draw_object_index_pool, swapchain_format);
+                auto pipe = std::make_shared<Pipeline>(draw_object_index_pool, swapchain_format, resolution);
 
                 pipe_instances.emplace_back(std::move(pipe));
 
                 auto handle = pipeline_handle<Pipeline>();
-                handle.obj_ptr = pipe;
+                handle.obj_ptr = pipe_instances.back();
                 return handle;
         }
 
@@ -101,6 +107,7 @@ private:
         std::shared_ptr<index_pool> draw_object_index_pool = std::make_shared<index_pool>();
 
         VkFormat swapchain_format = VK_FORMAT_UNDEFINED;
+        glm::uvec2 resolution = glm::vec2(1, 1);
 };
 #endif
 };
