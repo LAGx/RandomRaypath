@@ -31,7 +31,7 @@ struct object_2d_pipeline_data_model {
                 glm::vec4 transform = {}; // x_pos, y_pos, x_size, y_size
                 glm::vec4 color {};
 
-                glm::u32 get_actual_z_order() const {
+                glm::u32 get_render_order() const {
                         const glm::u32 space_type_bit = (space_basis == e_space_type::screen)
                                 ? glm::u32(1) << (sizeof(glm::u32) * CHAR_BIT - 1)
                                 : 0u;
@@ -67,9 +67,9 @@ protected:
                 bool actual_data = false;
         };
 
-        struct z_order_entry {
-                size_t actual_index = UINT64_MAX;
-                glm::u32 actual_z_order = UINT32_MAX;
+        struct render_order_entry {
+                size_t index = UINT64_MAX;
+                glm::u32 render_order = UINT32_MAX;
         };
 
 protected:
@@ -97,11 +97,9 @@ protected:
         void destroy_vertex_buffer(VkDevice device);
         void destroy_ubos_buffer(VkDevice device);
 
-
-
 protected:
-        bool z_order_dirty = false;
-        std::vector<z_order_entry> z_order_indexing;
+        bool render_order_dirty = false;
+        std::vector<render_order_entry> render_order;
 
         VkPipelineLayout vk_pipeline_layout = VK_NULL_HANDLE;
         VkPipeline vk_pipeline = VK_NULL_HANDLE;
@@ -141,9 +139,9 @@ void object_2d_pipeline<PipelineDataModel>::draw_commands(VkCommandBuffer in_com
         assert(frame_index < g_app_driver::k_frames_in_flight);
 #endif
 
-        if (z_order_dirty) {
+        if (render_order_dirty) {
                 rebuild_order();
-                z_order_dirty = false;
+                render_order_dirty = false;
         }
 
         vkCmdBindPipeline(in_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_pipeline);
@@ -178,10 +176,12 @@ void object_2d_pipeline<PipelineDataModel>::draw_commands(VkCommandBuffer in_com
             nullptr
         );
 
-        for (size_t i = 0; i < z_order_indexing.size(); ++i) {
-                auto& z_indexing = z_order_indexing[i];
-                const size_t draw_index = z_order_indexing[i].actual_index;
-                z_order_dirty |= this->draw_obj_data[draw_index].get_actual_z_order() != z_indexing.actual_z_order; // Indexing will be updated next frame
+        for (size_t i = 0; i < render_order.size(); ++i) {
+                auto& z_indexing = render_order[i];
+                const size_t draw_index = render_order[i].index;
+                auto& draw_data = this->draw_obj_data[draw_index];
+
+                render_order_dirty |= draw_data.get_render_order() != z_indexing.render_order;
 
                 // TODO: draw here
         }
@@ -202,31 +202,31 @@ void object_2d_pipeline<PipelineDataModel>::update_swapchain(VkFormat in_swapcha
 
 template<class PipelineDataModel>
 void object_2d_pipeline<PipelineDataModel>::rebuild_order() {
-        z_order_indexing.clear();
-        z_order_indexing.reserve(this->draw_obj_data.size());
+        render_order.clear();
+        render_order.reserve(this->draw_obj_data.size());
 
         for (size_t i = 0; i < this->draw_obj_data.size(); ++i) {
                 auto& obj_data = this->draw_obj_data[i];
-                z_order_indexing.push_back({ i, obj_data.get_actual_z_order() });
+                render_order.push_back({ i, obj_data.get_render_order() });
         }
 
-        std::stable_sort(z_order_indexing.begin(), z_order_indexing.end(),
-            [](const z_order_entry& a, const z_order_entry& b) {
-                    return a.actual_z_order < b.actual_z_order;
+        std::stable_sort(render_order.begin(), render_order.end(),
+            [](const render_order_entry& a, const render_order_entry& b) {
+                    return a.render_order < b.render_order;
             });
 }
 
 
 template<class PipelineDataModel>
 draw_obj_handle_id object_2d_pipeline<PipelineDataModel>::add_new_draw_obj() {
-        z_order_dirty = true;
+        render_order_dirty = true;
         return base_pipeline<PipelineDataModel>::add_new_draw_obj();
 }
 
 
 template<class PipelineDataModel>
 void object_2d_pipeline<PipelineDataModel>::remove_draw_obj(draw_obj_handle_id to_remove) {
-        z_order_dirty = true;
+        render_order_dirty = true;
         base_pipeline<PipelineDataModel>::remove_draw_obj(to_remove);
 }
 
