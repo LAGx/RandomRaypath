@@ -27,8 +27,16 @@ struct object_2d_pipeline_data_model {
 
         struct draw_obj : base_pipeline_data_model::draw_obj {
                 e_space_type space_basis = e_space_type::screen;
-                glm::u32 z_order = 0; // bigger on top, e_space_type::screen get +16000 priority
+                glm::u32 z_order = 0; // bigger on top, e_space_type::screen set significant bit to 1
                 glm::vec4 transform = {}; // x_pos, y_pos, x_size, y_size
+                glm::vec4 color {};
+
+                glm::u32 get_actual_z_order() const {
+                        const glm::u32 space_type_bit = (space_basis == e_space_type::screen)
+                                ? glm::u32(1) << (sizeof(glm::u32) * CHAR_BIT - 1)
+                                : 0u;
+                        return glm::u32(z_order) | space_type_bit;
+                }
         };
 };
 
@@ -59,7 +67,17 @@ protected:
                 bool actual_data = false;
         };
 
+        struct z_order_entry {
+                size_t actual_index = UINT64_MAX;
+                glm::u32 actual_z_order = UINT32_MAX;
+        };
+
 protected:
+        void rebuild_order();
+
+        virtual draw_obj_handle_id add_new_draw_obj() override;
+        virtual void remove_draw_obj(draw_obj_handle_id to_remove) override;
+
         void init_pipeline();
         void destroy_pipeline();
 
@@ -79,7 +97,12 @@ protected:
         void destroy_vertex_buffer(VkDevice device);
         void destroy_ubos_buffer(VkDevice device);
 
+
+
 protected:
+        bool z_order_dirty = false;
+        std::vector<z_order_entry> z_order_indexing;
+
         VkPipelineLayout vk_pipeline_layout = VK_NULL_HANDLE;
         VkPipeline vk_pipeline = VK_NULL_HANDLE;
 
@@ -118,6 +141,11 @@ void object_2d_pipeline<PipelineDataModel>::draw_commands(VkCommandBuffer in_com
         assert(frame_index < g_app_driver::k_frames_in_flight);
 #endif
 
+        if (z_order_dirty) {
+                rebuild_order();
+                z_order_dirty = false;
+        }
+
         vkCmdBindPipeline(in_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_pipeline);
 
         VkDeviceSize off = 0;
@@ -150,12 +178,16 @@ void object_2d_pipeline<PipelineDataModel>::draw_commands(VkCommandBuffer in_com
             nullptr
         );
 
-        // TODO: start_ticks implement in scene logic, placeholder for now
-        //static glm::u16 start_ticks = 5312;
-        //float t = start_ticks++;//(float)((now_ticks_ns() - start_ticks) / 1.0e9);
-        //vkCmdPushConstants(in_command_buffer, vk_pipeline_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(float), &t);
+        for (size_t i = 0; i < z_order_indexing.size(); ++i) {
+                auto& z_indexing = z_order_indexing[i];
+                const size_t draw_index = z_order_indexing[i].actual_index;
+                z_order_dirty |= this->draw_obj_data[draw_index].get_actual_z_order() != z_indexing.actual_z_order; // Indexing will be updated next frame
 
-        vkCmdDrawIndexed(in_command_buffer, 6, 1, 0, 0, 0); // instanceCount will iterate by gl_InstanceIndex inside shader
+                // TODO: draw here
+        }
+
+
+        // vkCmdDrawIndexed(in_command_buffer, 6, 1, 0, 0, 0); // instanceCount will iterate by gl_InstanceIndex inside shader
 }
 
 
@@ -165,6 +197,37 @@ void object_2d_pipeline<PipelineDataModel>::update_swapchain(VkFormat in_swapcha
         this->swapchain_format = in_swapchain_format;
         this->resolution = in_resolution;
         init_pipeline();
+}
+
+
+template<class PipelineDataModel>
+void object_2d_pipeline<PipelineDataModel>::rebuild_order() {
+        z_order_indexing.clear();
+        z_order_indexing.reserve(this->draw_obj_data.size());
+
+        for (size_t i = 0; i < this->draw_obj_data.size(); ++i) {
+                auto& obj_data = this->draw_obj_data[i];
+                z_order_indexing.push_back({ i, obj_data.get_actual_z_order() });
+        }
+
+        std::stable_sort(z_order_indexing.begin(), z_order_indexing.end(),
+            [](const z_order_entry& a, const z_order_entry& b) {
+                    return a.actual_z_order < b.actual_z_order;
+            });
+}
+
+
+template<class PipelineDataModel>
+draw_obj_handle_id object_2d_pipeline<PipelineDataModel>::add_new_draw_obj() {
+        z_order_dirty = true;
+        return base_pipeline<PipelineDataModel>::add_new_draw_obj();
+}
+
+
+template<class PipelineDataModel>
+void object_2d_pipeline<PipelineDataModel>::remove_draw_obj(draw_obj_handle_id to_remove) {
+        z_order_dirty = true;
+        base_pipeline<PipelineDataModel>::remove_draw_obj(to_remove);
 }
 
 
