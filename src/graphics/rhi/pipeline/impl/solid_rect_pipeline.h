@@ -12,7 +12,7 @@ struct solid_rect_pipeline_data_model {
         };
 
         struct draw_obj : object_2d_pipeline_data_model::draw_obj {
-                glm::vec4 color {};
+               // glm::vec4 color {};
         };
 };
 
