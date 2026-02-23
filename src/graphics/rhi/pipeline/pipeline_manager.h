@@ -31,7 +31,9 @@ public:
                         .resolution = resolution,
                         .render_order = render_priority
                 };
+
                 auto pipe = std::make_shared<Pipeline>(args);
+                pipe->construct_pipeline();
 
                 // binary search
                 auto found_pipe_it = std::lower_bound(
@@ -41,10 +43,10 @@ public:
                     }
                 );
 
-                pipe_instances.emplace(found_pipe_it, std::move(pipe));
+                auto inserted_pipe_it = pipe_instances.emplace(found_pipe_it, pipe);
 
                 auto handle = pipeline_handle<Pipeline>();
-                handle.obj_ptr = pipe_instances.back();
+                handle.obj_ptr = *inserted_pipe_it;
                 return handle;
         }
 
