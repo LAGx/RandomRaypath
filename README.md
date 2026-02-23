@@ -2,7 +2,7 @@ Random Raypath Project
   
 Random Raypath is a high-performance C++23 project built around an optimized Vulkan renderer (Linux + Windows)   
 for interactive visualizing multi-ray paths through a heterogeneous-environment simulation.   
-Think of a light ray bending and splitting inside a soap bubble.   
+Think of a light ray bending and splitting inside a flat soap bubble medium (Branched flow of light phenomenon).    
   
 The core goal is to push the maximum number of rays on screen in real time, with rapid draw-target switching   
 and a data-oriented pipeline designed for low overhead and stable frame pacing.   
@@ -19,5 +19,9 @@ network distribution - 0%
 multithread computation - 0%.  
   
 Simulation reference:  
+https://www.youtube.com/watch?v=6aZ45RNHa6U  
 https://www.youtube.com/watch?v=UNCNp1tBqKY  
 https://www.youtube.com/watch?v=7Cc08CGDKNY  
+  
+The project uses the standart CMake way for building.  
+Thrid-Party libs has been copied into the project as source code or uses github subrepository reference.  
