@@ -71,7 +71,7 @@ public:
         virtual void draw_commands(VkCommandBuffer in_command_buffer, glm::u32 frame_index) override;
         virtual void update_swapchain(VkFormat in_swapchain_format, glm::uvec2 resolution) override;
 
-        virtual void update_render_obj(typename PipelineDataModel::draw_obj& inout_draw_data, typename PipelineDataModel::pipe2d_draw_obj_ssbo& inout_ssbo_obj);
+        virtual void update_render_obj(const typename PipelineDataModel::draw_obj& inout_draw_data, typename PipelineDataModel::pipe2d_draw_obj_ssbo& inout_ssbo_obj);
 
 protected:
         using frame_ubo_t = PipelineDataModel::pipe2d_frame_ubo;
@@ -283,7 +283,7 @@ void object_2d_pipeline<PipelineDataModel>::update_object_memory(glm::u32 frame_
 
 
 template<class PipelineDataModel>
-void object_2d_pipeline<PipelineDataModel>::update_render_obj(typename PipelineDataModel::draw_obj& inout_draw_data, typename PipelineDataModel::pipe2d_draw_obj_ssbo& inout_ssbo_obj) {
+void object_2d_pipeline<PipelineDataModel>::update_render_obj(const typename PipelineDataModel::draw_obj& inout_draw_data, typename PipelineDataModel::pipe2d_draw_obj_ssbo& inout_ssbo_obj) {
         inout_ssbo_obj.color = inout_draw_data.color;
         inout_ssbo_obj.space_basis = (glm::u32)inout_draw_data.space_basis;
 

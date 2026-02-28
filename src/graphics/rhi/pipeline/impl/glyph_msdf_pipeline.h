@@ -11,7 +11,6 @@ struct glyph_msdf_pipeline_data_model {
         };
 
         struct draw_obj : object_2d_pipeline_data_model::draw_obj {
-                bool glyph_need_update = true;
                 unsigned char content_glyph = 0;
                 glm::f32 text_weight = 1.f;
                 glm::f32 text_outline_size = 1.f; // in px
@@ -44,11 +43,16 @@ struct glyph_mapping_entry {
         double y_end_em = 0;
 };
 
+struct glyph_uv_mapping {
+        unsigned char mapped_character = 0;
+        glm::vec4 uv_rect = {};
+};
+
 class glyph_msdf_pipeline final : public object_2d_pipeline<glyph_msdf_pipeline_data_model> {
 public:
         using object_2d_pipeline::object_2d_pipeline;
 public:
-        virtual void update_render_obj(typename glyph_msdf_pipeline_data_model::draw_obj& inout_draw_data, typename glyph_msdf_pipeline_data_model::pipe2d_draw_obj_ssbo& inout_ssbo_obj) override;
+        virtual void update_render_obj(const typename glyph_msdf_pipeline_data_model::draw_obj& inout_draw_data, typename glyph_msdf_pipeline_data_model::pipe2d_draw_obj_ssbo& inout_ssbo_obj) override;
 
 protected:
         virtual std::filesystem::path get_vertex_shader_path() const override;
@@ -69,14 +73,11 @@ protected:
         VkImageView atlas_view = VK_NULL_HANDLE;
         VkSampler atlas_sampler = VK_NULL_HANDLE;
 
-        std::unordered_map<unsigned char, glyph_mapping_entry> glyph_mapping;
+        std::unordered_map<unsigned char, glyph_uv_mapping> glyph_mapping;
 
 private:
         void create_atlas_texture(VkDevice device);
         void destroy_atlas_texture(VkDevice device);
-
-        void rebuild_instances();
-        void decode_utf8_codepoints(draw_obj_model_t& draw_data);
 };
 
 #endif

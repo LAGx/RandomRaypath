@@ -10,13 +10,9 @@
 using namespace ray::graphics;
 using namespace ray;
 
-void glyph_msdf_pipeline::update_render_obj(typename glyph_msdf_pipeline_data_model::draw_obj& inout_draw_data, typename glyph_msdf_pipeline_data_model::pipe2d_draw_obj_ssbo& inout_ssbo_obj) {
+void glyph_msdf_pipeline::update_render_obj(const typename glyph_msdf_pipeline_data_model::draw_obj& inout_draw_data, typename glyph_msdf_pipeline_data_model::pipe2d_draw_obj_ssbo& inout_ssbo_obj) {
 
-        {//if (inout_draw_data.glyph_need_update) {
-                inout_ssbo_obj.uv_rect = glm::vec4(0.1, 0.4, 0.3, 0.6); // u0,v0,u1,v1 glyph in atlas UV
-
-                inout_draw_data.glyph_need_update = false;
-        }
+        inout_ssbo_obj.uv_rect = glyph_mapping[inout_draw_data.content_glyph].uv_rect;
 
         inout_ssbo_obj.weight = inout_draw_data.text_weight;
         inout_ssbo_obj.outline_size = inout_draw_data.text_outline_size;
@@ -158,14 +154,14 @@ static double parse_f64(std::string_view sv) {
         return v;
 }
 
-std::unordered_map<unsigned char, glyph_mapping_entry> load_glyph_mapping_csv_file(const std::string& csv_path) {
+std::vector<glyph_mapping_entry> load_glyph_mapping_csv_file(const std::string& csv_path) {
         std::ifstream file(csv_path, std::ios::binary);
         if (!file) {
                 ray_log(e_log_type::warning, "Failed to open glyph CSV: {}", csv_path);
                 return {};
         }
 
-        std::unordered_map<unsigned char, glyph_mapping_entry> result;
+        std::vector<glyph_mapping_entry> result;
         result.reserve(256);
 
         std::string line;
@@ -206,7 +202,7 @@ std::unordered_map<unsigned char, glyph_mapping_entry> load_glyph_mapping_csv_fi
                 entry.y_begin_em = plane_top;
                 entry.y_end_em   = plane_bottom;
 
-                result[entry.mapped_character] = entry;
+                result.push_back(entry);
         }
 
         return result;
@@ -221,11 +217,21 @@ void glyph_msdf_pipeline::create_atlas_texture(VkDevice device) {
                 return;
         }
 
-        glyph_mapping = load_glyph_mapping_csv_file("../resource/font/gsanscode_w500.csv");
+        std::vector<glyph_mapping_entry> glyph_vec = load_glyph_mapping_csv_file("../resource/font/gsanscode_w500.csv");
 
-        if (glyph_mapping.empty()) {
+        if (glyph_vec.empty()) {
                 ray_log(e_log_type::fatal, "glyph_mapping font file failed to load");
                 return;
+        }
+
+        glyph_mapping.clear();
+        glyph_mapping.reserve(256);
+
+        for (auto& em : glyph_vec) {
+                glyph_mapping[em.mapped_character] = glyph_uv_mapping {
+                        .mapped_character = em.mapped_character,
+                        .uv_rect = glm::vec4(em.x_begin_em, em.y_begin_em, em.x_end_em, em.y_end_em)
+                };
         }
 
         const VkImageCreateInfo image_info {
