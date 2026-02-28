@@ -37,10 +37,16 @@ struct glyph_msdf_pipeline_data_model {
 struct glyph_mapping_entry {
         unsigned char mapped_character = 0;
         double advance_em = 0;
-        double x_begin_em = 0;
-        double x_end_em = 0;
-        double y_begin_em = 0;
-        double y_end_em = 0;
+
+        double plane_left_em = 0;
+        double plane_bottom_em = 0;
+        double plane_right_em = 0;
+        double plane_top_em = 0;
+
+        double atlas_left_px = 0;
+        double atlas_bottom_px = 0;
+        double atlas_right_px = 0;
+        double atlas_top_px = 0;
 };
 
 struct glyph_uv_mapping {

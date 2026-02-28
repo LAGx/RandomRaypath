@@ -183,24 +183,29 @@ std::vector<glyph_mapping_entry> load_glyph_mapping_csv_file(const std::string& 
                 }
 
                 const std::uint32_t codepoint = parse_u32(cols[0]);
+
                 if (codepoint > 255) {
                         ray_log(e_log_type::warning, "unsupported glyph mapping > 255: {}", cols[0]);
                         continue;
                 }
 
                 glyph_mapping_entry entry{};
-                entry.mapped_character = static_cast<unsigned char>(codepoint);
-                entry.advance_em = parse_f64(cols[1]);
+                if (cols.size() < 10) {
+                        continue;
+                }
 
-                const double plane_left   = parse_f64(cols[2]);
-                const double plane_top    = parse_f64(cols[3]);
-                const double plane_right  = parse_f64(cols[4]);
-                const double plane_bottom = parse_f64(cols[5]);
+                entry.mapped_character = static_cast<unsigned char>(parse_u32(cols[0]));
+                entry.advance_em       = parse_f64(cols[1]);
 
-                entry.x_begin_em = plane_left;
-                entry.x_end_em   = plane_right;
-                entry.y_begin_em = plane_top;
-                entry.y_end_em   = plane_bottom;
+                entry.plane_left_em   = parse_f64(cols[2]);
+                entry.plane_bottom_em = parse_f64(cols[3]);
+                entry.plane_right_em  = parse_f64(cols[4]);
+                entry.plane_top_em    = parse_f64(cols[5]);
+
+                entry.atlas_left_px   = parse_f64(cols[6]);
+                entry.atlas_bottom_px = parse_f64(cols[7]);
+                entry.atlas_right_px  = parse_f64(cols[8]);
+                entry.atlas_top_px    = parse_f64(cols[9]);
 
                 result.push_back(entry);
         }
@@ -227,11 +232,19 @@ void glyph_msdf_pipeline::create_atlas_texture(VkDevice device) {
         glyph_mapping.clear();
         glyph_mapping.reserve(256);
 
-        for (auto& em : glyph_vec) {
-                glyph_mapping[em.mapped_character] = glyph_uv_mapping {
+        const glm::f32 inv_w = 1.0f / (glm::f32)loaded_image_data.width;
+        const glm::f32 inv_h = 1.0f / (glm::f32)loaded_image_data.height;
+
+        for (const auto& em : glyph_vec) {
+                glyph_mapping[em.mapped_character] = glyph_uv_mapping{
                         .mapped_character = em.mapped_character,
-                        .uv_rect = glm::vec4(em.x_begin_em, em.y_begin_em, em.x_end_em, em.y_end_em)
-                };
+                        .uv_rect = glm::vec4(
+                            (glm::f32)em.atlas_left_px * inv_w,
+                            (glm::f32)em.atlas_top_px * inv_h,
+                            (glm::f32)em.atlas_right_px * inv_w,
+                            (glm::f32)em.atlas_bottom_px * inv_h
+                        )
+                    };
         }
 
         const VkImageCreateInfo image_info {
