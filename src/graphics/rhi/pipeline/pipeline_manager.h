@@ -64,60 +64,6 @@ public:
                 }
         }
 
-        template<class Pipeline>
-        draw_obj_handle<Pipeline> create_draw_obj(pipeline_handle<Pipeline> pipe_id) {
-                auto pipe_ptr = pipe_id.obj_ptr.lock();
-                if (!pipe_ptr) {
-                        return draw_obj_handle<Pipeline>();
-                }
-
-                draw_obj_handle_id obj_handle_id = pipe_ptr->create_draw_obj();
-                auto obj_handler = draw_obj_handle<Pipeline>();
-                obj_handler.pipe_handle.obj_ptr = pipe_id.obj_ptr;
-                obj_handler.obj_index = obj_handle_id;
-                return obj_handler;
-        }
-
-        void destroy_draw_obj(draw_obj_handle<> obj_id) {
-                auto pipe_ptr = obj_id.pipe_handle.obj_ptr.lock();
-                if (!pipe_ptr) {
-                        return;
-                }
-
-                pipe_ptr->destroy_draw_obj(obj_id.obj_index);
-        }
-
-        template<class Pipeline>
-        Pipeline::pipeline_data_model_t* access_pipeline_data(pipeline_handle<Pipeline> pipe_id, bool set_need_update = true) const {
-                auto pipe_ptr = pipe_id.obj_ptr.lock();
-                if (!pipe_ptr) {
-                        return nullptr;
-                }
-
-                auto model_ptr = pipe_ptr->template get_pipeline_model<Pipeline>();
-                if (set_need_update && model_ptr) {
-                        model_ptr->need_update = true;
-                }
-
-                return model_ptr;
-        }
-
-        template<class Pipeline>
-        Pipeline::draw_obj_model_t* access_draw_obj_data(draw_obj_handle<Pipeline> draw_id, bool set_need_update = true) const {
-                auto pipe_ptr = draw_id.pipe_handle.obj_ptr.lock();
-                if (!pipe_ptr) {
-                        return nullptr;
-                }
-
-                auto model_ptr = pipe_ptr->template get_draw_model<Pipeline>(draw_id.obj_index);
-
-                if (set_need_update && model_ptr) {
-                        model_ptr->need_update = true;
-                }
-
-                return model_ptr;
-        }
-
 private:
         std::vector<std::shared_ptr<i_pipeline>> pipe_instances; // single owner
         std::shared_ptr<index_pool> draw_object_index_pool = std::make_shared<index_pool>();

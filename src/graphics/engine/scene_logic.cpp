@@ -59,16 +59,30 @@ scene_logic::scene_logic(window& win, renderer& rend) {
         all_pipelines.push_back(rect_pipeline);
         all_pipelines.push_back(text_pipeline);
 
-        rainbow_1_screen = rend.pipe.create_draw_obj<rainbow_rect_pipeline>(rainbow_pipeline);
-        rainbow_2_screen = rend.pipe.create_draw_obj<rainbow_rect_pipeline>(rainbow_pipeline);
-        rect_3_dyn_world = rend.pipe.create_draw_obj<solid_rect_pipeline>(rect_pipeline);
-        rect_4_dyn_world = rend.pipe.create_draw_obj<solid_rect_pipeline>(rect_pipeline);
-        rect_5_world = rend.pipe.create_draw_obj<solid_rect_pipeline>(rect_pipeline);
+        rainbow_1_screen = rainbow_pipeline.create_draw_obj();
+        rainbow_2_screen = rainbow_pipeline.create_draw_obj();
+        rect_3_dyn_world = rect_pipeline.create_draw_obj();
+        rect_4_dyn_world = rect_pipeline.create_draw_obj();
+        rect_5_world = rect_pipeline.create_draw_obj();
 
-        text_1_handle = rend.pipe.create_draw_obj<glyph_pipeline>(text_pipeline);
-        text_2_handle = rend.pipe.create_draw_obj<glyph_pipeline>(text_pipeline);
+        text_1_handle = text_pipeline.create_draw_obj();
+        text_2_handle = text_pipeline.create_draw_obj();
 
-        if (auto text_1_handle_data = rend.pipe.access_draw_obj_data(text_1_handle)) {
+        text_line_manager.init(rend.pipe, 10);
+
+        new_line_1 = text_line_manager.create_text_line(logical_text_line_args {
+                        .init_content_text = "hello world",
+                        .init_capacity = 48,
+                        .space_basis = e_space_type::world,
+                        .transform = glm::vec4(0, 0, 0, 60), // x_pos_px, y_pos_px, 0, y_size_px (pivot top left)
+                        .z_order = 10,
+                        .text_color = ray_colors::cyan,
+                        .outline_size_ndc = 0.1f,
+                        .outline_color = ray_colors::red,
+                        .background_color = ray_colors::blue
+                });
+
+        if (auto text_1_handle_data = text_1_handle.access_draw_obj_data()) {
                 text_1_handle_data->content_glyph = 'h';
                 text_1_handle_data->text_outline_size_ndc = 0.1f;
                 text_1_handle_data->text_outline_color = ray_colors::red;
@@ -79,7 +93,7 @@ scene_logic::scene_logic(window& win, renderer& rend) {
                 text_1_handle_data->color = ray_colors::cyan;
         }
 
-        if (auto text_2_handle_data = rend.pipe.access_draw_obj_data(text_2_handle)) {
+        if (auto text_2_handle_data = text_2_handle.access_draw_obj_data()) {
                 text_2_handle_data->content_glyph = 'Q';
                 text_2_handle_data->text_outline_size_ndc = 0.2f;
                 text_2_handle_data->color = glm::vec4(1);
@@ -90,21 +104,21 @@ scene_logic::scene_logic(window& win, renderer& rend) {
                 text_2_handle_data->transform = glm::vec4(-200, -200, 150, 200); // x_pos, y_pos, x_size, y_size
         }
 
-        if (auto rainbow_1_screen_data = rend.pipe.access_draw_obj_data(rainbow_1_screen)) {
+        if (auto rainbow_1_screen_data = rainbow_1_screen.access_draw_obj_data()) {
                 rainbow_1_screen_data->space_basis = e_space_type::screen;
                 rainbow_1_screen_data->z_order = 100;
                 rainbow_1_screen_data->transform = glm::vec4(40, 150, 100, 120);
                 rainbow_1_screen_data->color = ray_colors::cyan;
         }
 
-        if (auto rainbow_2_world_data = rend.pipe.access_draw_obj_data(rainbow_2_screen)) {
+        if (auto rainbow_2_world_data = rainbow_2_screen.access_draw_obj_data()) {
                 rainbow_2_world_data->space_basis = e_space_type::world;
                 rainbow_2_world_data->z_order = 200;
                 rainbow_2_world_data->transform = glm::vec4(0, -10, 80, 80);
                 rainbow_2_world_data->color = ray_colors::navy;
         }
 
-        if (auto rect_3_dyn_screen_data = rend.pipe.access_draw_obj_data(rect_3_dyn_world)) {
+        if (auto rect_3_dyn_screen_data = rect_3_dyn_world.access_draw_obj_data()) {
                 rect_3_dyn_screen_data->space_basis = e_space_type::world;
                 rect_3_dyn_screen_data->z_order = 3;
                 transform_dyn_3 = glm::vec4(200, 100, 200, 100);
@@ -112,7 +126,7 @@ scene_logic::scene_logic(window& win, renderer& rend) {
                 rect_3_dyn_screen_data->color = ray_colors::lime;
         }
 
-        if (auto rect_4_dyn_world_data = rend.pipe.access_draw_obj_data(rect_4_dyn_world)) {
+        if (auto rect_4_dyn_world_data = rect_4_dyn_world.access_draw_obj_data()) {
                 rect_4_dyn_world_data->space_basis = e_space_type::screen;
                 rect_4_dyn_world_data->z_order = 4;
                 transform_dyn_4 = glm::vec4(470, 120, 150, 150);
@@ -120,7 +134,7 @@ scene_logic::scene_logic(window& win, renderer& rend) {
                 rect_4_dyn_world_data->color = ray_colors::purple;
         }
 
-        if (auto rect_5_world_data = rend.pipe.access_draw_obj_data(rect_5_world)) {
+        if (auto rect_5_world_data = rect_5_world.access_draw_obj_data()) {
                 rect_5_world_data->space_basis = e_space_type::world;
                 rect_5_world_data->z_order = 5;
                 rect_5_world_data->transform = glm::vec4(100, 250, 350, 210);
@@ -135,19 +149,20 @@ bool scene_logic::tick(window& win, renderer& rend) {
                 last_delta_time_ns = curr_time_ns - last_time_ns;
                 last_time_ns = curr_time_ns;
 
-                //std::this_thread::sleep_for(std::chrono::milliseconds(50));
-                // if ((last_time_ns % 1'000'000) == 0) {
-                //         std::chrono::duration<glm::u64, std::nano> ns_duration {last_delta_time_ns};
-                //         double sec_duration = std::chrono::duration_cast<std::chrono::duration<double>>(ns_duration).count();
-                //         double fps = 1.f / sec_duration;
-                //         std::println("delta ns: {}, fps: {}", last_delta_time_ns, fps);
-                // }
+                if (!!new_line_1) {
+                        std::chrono::duration<glm::u64, std::nano> ns_duration {last_delta_time_ns};
+                        double sec_duration = std::chrono::duration_cast<std::chrono::duration<double>>(ns_duration).count();
+                        double fps = 1.f / sec_duration;
+                        //std::println("delta ns: {}, fps: {}", last_delta_time_ns, fps);
+                        const std::string fps_ms_str = std::format("delta ns: %.8f, fps: %.1f", last_delta_time_ns, fps);
+                        new_line_1->update(fps_ms_str);
+                }
         }
 
         tick_camera_movement(win, rend);
 
         for (auto& world_pipeline : all_pipelines) {
-                auto world_data = rend.pipe.access_pipeline_data(world_pipeline);
+                auto world_data = world_pipeline.access_pipeline_data();
                 if (!world_data) {
                         return false;
                 }
@@ -158,7 +173,7 @@ bool scene_logic::tick(window& win, renderer& rend) {
                 world_data->camera_transform = camera_transform;
         }
 
-        if (auto rect_3_dyn_world_data = rend.pipe.access_draw_obj_data(rect_3_dyn_world)) {
+        if (auto rect_3_dyn_world_data = rect_3_dyn_world.access_draw_obj_data()) {
                 rect_3_dyn_world_data->transform = transform_dyn_3 * std::sin((float)last_time_ns / 1'000'000'000 );
         } else {
                 return false;
@@ -178,6 +193,8 @@ void scene_logic::cleanup(window& win, renderer& rend) {
         for (auto p : all_pipelines) {
                 rend.pipe.destroy_pipeline(p);
         }
+
+        new_line_1.reset();
 }
 
 

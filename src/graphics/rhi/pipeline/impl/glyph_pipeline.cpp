@@ -12,9 +12,13 @@ using namespace ray;
 
 void glyph_pipeline::update_render_obj(const typename glyph_pipeline_data_model::draw_obj& inout_draw_data, typename glyph_pipeline_data_model::pipe2d_draw_obj_ssbo& inout_ssbo_obj) {
 
+        inout_ssbo_obj.display_enable = inout_draw_data.content_glyph != 0;
+        if (!inout_ssbo_obj.display_enable) {
+                return;
+        }
+
         inout_ssbo_obj.uv_rect = glyph_mapping[inout_draw_data.content_glyph].uv_rect;
 
-        inout_ssbo_obj.display_enable = inout_draw_data.content_glyph != 0;
         inout_ssbo_obj.outline_size_ndc = inout_draw_data.text_outline_size_ndc;
 
         inout_ssbo_obj.outline_color = inout_draw_data.text_outline_color;
