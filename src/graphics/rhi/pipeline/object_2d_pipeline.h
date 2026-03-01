@@ -110,12 +110,12 @@ protected:
         virtual void create_graphical_buffers(VkDevice device);
         virtual void destroy_graphical_buffers(VkDevice device);
 
-        virtual std::vector<VkDescriptorSetLayoutBinding> generate_layout_bindings();
-        virtual std::vector<VkDescriptorPoolSize> generate_pool_sizes(glm::u32 frame_amount);
-        virtual std::vector<VkWriteDescriptorSet> generate_descriptor_sets(
+        virtual std::vector<VkDescriptorSetLayoutBinding> gen_vk_layout_bindings();
+        virtual std::vector<VkDescriptorPoolSize> gen_vk_pool_sizes(glm::u32 frame_amount);
+        virtual std::vector<VkWriteDescriptorSet> gen_vk_descriptor_sets(
                 const VkDescriptorSet& in_descriptor_set, glm::u32 frame_index,
                 std::list<VkDescriptorBufferInfo>& buf_info_lifetime, std::list<VkDescriptorImageInfo>& img_info_lifetime);
-
+        virtual VkPipelineColorBlendAttachmentState gen_vk_pipe_color_blend_atch() const;
 
         void update_object_memory(glm::u32 frame_index, bool dirty_update);
         void rebuild_order();
@@ -452,18 +452,7 @@ void object_2d_pipeline<PipelineDataModel>::init_pipeline() {
         multisample_state_cinf.sampleShadingEnable = VK_FALSE;
         multisample_state_cinf.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
-        VkPipelineColorBlendAttachmentState color_blend_attch_state {};
-        color_blend_attch_state.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-        color_blend_attch_state.blendEnable = VK_TRUE;
-        color_blend_attch_state.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-        color_blend_attch_state.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-        color_blend_attch_state.colorBlendOp        = VK_BLEND_OP_ADD;
-
-        // A   = src.a * 1 + dst.a * (1-src.a)  (fine for UI)
-        // add in .frag: outColor = vec4(vColor.rgb * vColor.a, vColor.a);
-        //color_blend_attch_state.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-        //color_blend_attch_state.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-        //color_blend_attch_state.alphaBlendOp        = VK_BLEND_OP_ADD;
+        VkPipelineColorBlendAttachmentState color_blend_attch_state = gen_vk_pipe_color_blend_atch();
 
         VkPipelineColorBlendStateCreateInfo color_blend_state_cinf { VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO };
         color_blend_state_cinf.logicOpEnable = VK_FALSE;
@@ -529,7 +518,7 @@ void object_2d_pipeline<PipelineDataModel>::destroy_pipeline() {
 
 template<class PipelineDataModel>
 void object_2d_pipeline<PipelineDataModel>::init_descriptor_sets(VkDevice device) {
-        std::vector<VkDescriptorSetLayoutBinding> layout_bindings = generate_layout_bindings();
+        std::vector<VkDescriptorSetLayoutBinding> layout_bindings = gen_vk_layout_bindings();
 
         VkDescriptorSetLayoutCreateInfo layout_info {VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO};
         layout_info.bindingCount = layout_bindings.size();
@@ -542,7 +531,7 @@ void object_2d_pipeline<PipelineDataModel>::init_descriptor_sets(VkDevice device
         }
 
         glm::u32 frame_amount = g_app_driver::k_frames_in_flight;
-        std::vector<VkDescriptorPoolSize> pool_sizes = generate_pool_sizes(frame_amount);
+        std::vector<VkDescriptorPoolSize> pool_sizes = gen_vk_pool_sizes(frame_amount);
 
         VkDescriptorPoolCreateInfo pool_info{ VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
         pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
@@ -571,14 +560,14 @@ void object_2d_pipeline<PipelineDataModel>::init_descriptor_sets(VkDevice device
         for (glm::u32 i = 0; i < vk_descriptor_sets.size(); i++) {
                 std::list<VkDescriptorBufferInfo> buf_info_lifetime;
                 std::list<VkDescriptorImageInfo> img_info_lifetime;
-                const std::vector<VkWriteDescriptorSet> writes_sets = generate_descriptor_sets(vk_descriptor_sets[i], i, buf_info_lifetime, img_info_lifetime);
+                const std::vector<VkWriteDescriptorSet> writes_sets = gen_vk_descriptor_sets(vk_descriptor_sets[i], i, buf_info_lifetime, img_info_lifetime);
                 vkUpdateDescriptorSets(device, writes_sets.size(), writes_sets.data(), 0, nullptr);
         }
 }
 
 
 template<class PipelineDataModel>
-std::vector<VkDescriptorSetLayoutBinding> object_2d_pipeline<PipelineDataModel>::generate_layout_bindings() {
+std::vector<VkDescriptorSetLayoutBinding> object_2d_pipeline<PipelineDataModel>::gen_vk_layout_bindings() {
         return { VkDescriptorSetLayoutBinding {
                 .binding = 0,
                 .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -594,7 +583,7 @@ std::vector<VkDescriptorSetLayoutBinding> object_2d_pipeline<PipelineDataModel>:
 
 
 template<class PipelineDataModel>
-std::vector<VkDescriptorPoolSize> object_2d_pipeline<PipelineDataModel>::generate_pool_sizes(glm::u32 frame_amount) {
+std::vector<VkDescriptorPoolSize> object_2d_pipeline<PipelineDataModel>::gen_vk_pool_sizes(glm::u32 frame_amount) {
         return { VkDescriptorPoolSize {
                 .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                 .descriptorCount = frame_amount
@@ -606,7 +595,7 @@ std::vector<VkDescriptorPoolSize> object_2d_pipeline<PipelineDataModel>::generat
 
 
 template<class PipelineDataModel>
-std::vector<VkWriteDescriptorSet> object_2d_pipeline<PipelineDataModel>::generate_descriptor_sets(
+std::vector<VkWriteDescriptorSet> object_2d_pipeline<PipelineDataModel>::gen_vk_descriptor_sets(
         const VkDescriptorSet& in_descriptor_set, glm::u32 frame_index, std::list<VkDescriptorBufferInfo>& buf_info_lifetime, std::list<VkDescriptorImageInfo>& img_info_lifetime) {
         buf_info_lifetime.push_back( VkDescriptorBufferInfo {
                 .buffer = pipe_frame_ubos_data[frame_index].buffer,
@@ -639,6 +628,24 @@ std::vector<VkWriteDescriptorSet> object_2d_pipeline<PipelineDataModel>::generat
                 .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
                 .pBufferInfo = &*it_draw_ssbos
         }};
+}
+
+
+template <class PipelineDataModel>
+VkPipelineColorBlendAttachmentState object_2d_pipeline<PipelineDataModel>::gen_vk_pipe_color_blend_atch() const {
+        return VkPipelineColorBlendAttachmentState {
+                .blendEnable = VK_TRUE,
+                .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
+                .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+                .colorBlendOp = VK_BLEND_OP_ADD,
+                .colorWriteMask =
+                        VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT
+                        | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
+        };
+
+        // A   = src.a * 1 + dst.a * (1-src.a)  (fine for UI)
+        // add in .frag: outColor = vec4(vColor.rgb * vColor.a, vColor.a);
+        //color_blend_attch_state.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
 }
 
 

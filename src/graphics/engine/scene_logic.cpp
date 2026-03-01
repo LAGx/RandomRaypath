@@ -1,7 +1,7 @@
 ﻿#include "scene_logic.h"
 #include "graphics/window/window.h"
 #include "graphics/rhi/renderer.h"
-#include "graphics/rhi/pipeline/impl/glyph_msdf_pipeline.h"
+#include "graphics/rhi/pipeline/impl/glyph_pipeline.h"
 #include "utils/ray_time.h"
 
 #include <thread>
@@ -15,7 +15,10 @@ using namespace ray::graphics;
 
 class ray_colors final {
 public:
-        static constexpr float alpha_value = 0.8f;
+        static constexpr float alpha_value = 0.5f;
+
+        static constexpr glm::vec4 transparent {0.0f, 0.0f, 0.0f, 0.0f};
+
         static constexpr glm::vec4 black {0.0f, 0.0f, 0.0f, alpha_value};
         static constexpr glm::vec4 white {1.0f, 1.0f, 1.0f, alpha_value};
         static constexpr glm::vec4 gray {0.5f, 0.5f, 0.5f, alpha_value};
@@ -46,7 +49,7 @@ scene_logic::scene_logic(window& win, renderer& rend) {
         pipeline_handle<rainbow_rect_pipeline> rainbow_pipeline = rend.pipe.create_pipeline<rainbow_rect_pipeline>(2);
         pipeline_handle<solid_rect_pipeline> rect_pipeline = rend.pipe.create_pipeline<solid_rect_pipeline>(1);
 
-        pipeline_handle<glyph_msdf_pipeline> text_pipeline = rend.pipe.create_pipeline<glyph_msdf_pipeline>(3);
+        pipeline_handle<glyph_pipeline> text_pipeline = rend.pipe.create_pipeline<glyph_pipeline>(3);
 
         if (!rainbow_pipeline.is_valid() || !rect_pipeline.is_valid() || !text_pipeline.is_valid()) {
                 return;
@@ -62,31 +65,29 @@ scene_logic::scene_logic(window& win, renderer& rend) {
         rect_4_dyn_world = rend.pipe.create_draw_obj<solid_rect_pipeline>(rect_pipeline);
         rect_5_world = rend.pipe.create_draw_obj<solid_rect_pipeline>(rect_pipeline);
 
-        text_1_handle = rend.pipe.create_draw_obj<glyph_msdf_pipeline>(text_pipeline);
-        text_2_handle = rend.pipe.create_draw_obj<glyph_msdf_pipeline>(text_pipeline);
+        text_1_handle = rend.pipe.create_draw_obj<glyph_pipeline>(text_pipeline);
+        text_2_handle = rend.pipe.create_draw_obj<glyph_pipeline>(text_pipeline);
 
         if (auto text_1_handle_data = rend.pipe.access_draw_obj_data(text_1_handle)) {
                 text_1_handle_data->content_glyph = 'h';
-                text_1_handle_data->text_weight = 10.f;
-                text_1_handle_data->text_outline_size = 3.f; // in px
+                text_1_handle_data->text_outline_size_ndc = 0.1f;
                 text_1_handle_data->text_outline_color = ray_colors::red;
                 text_1_handle_data->background_color = ray_colors::blue;
                 text_1_handle_data->space_basis = e_space_type::world;
                 text_1_handle_data->z_order = 10;
-                text_1_handle_data->transform = glm::vec4(-100, -250, 100, 150); // x_pos, y_pos, x_size, y_size
+                text_1_handle_data->transform = glm::vec4(0, -250, 100, 100); // x_pos, y_pos, x_size, y_size
                 text_1_handle_data->color = ray_colors::cyan;
         }
 
         if (auto text_2_handle_data = rend.pipe.access_draw_obj_data(text_2_handle)) {
                 text_2_handle_data->content_glyph = 'B';
-                text_2_handle_data->text_weight = 600.f;
-                text_2_handle_data->text_outline_size = 1.f; // in px
-                text_2_handle_data->text_outline_color = ray_colors::cyan;
-                text_2_handle_data->background_color = ray_colors::red;
-                text_2_handle_data->space_basis = e_space_type::screen;
+                text_2_handle_data->text_outline_size_ndc = 0.2f;
+                text_2_handle_data->color = ray_colors::cyan;
+                text_2_handle_data->text_outline_color = ray_colors::lime;
+                text_2_handle_data->background_color = ray_colors::transparent;
+                text_2_handle_data->space_basis = e_space_type::world;
                 text_2_handle_data->z_order = 11;
-                text_2_handle_data->transform = glm::vec4(-100, -200, 150, 150); // x_pos, y_pos, x_size, y_size
-                text_2_handle_data->color = ray_colors::white;
+                text_2_handle_data->transform = glm::vec4(-200, -200, 150, 200); // x_pos, y_pos, x_size, y_size
         }
 
         if (auto rainbow_1_screen_data = rend.pipe.access_draw_obj_data(rainbow_1_screen)) {
