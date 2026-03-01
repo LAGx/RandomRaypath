@@ -80,9 +80,9 @@ scene_logic::scene_logic(window& win, renderer& rend) {
         }
 
         if (auto text_2_handle_data = rend.pipe.access_draw_obj_data(text_2_handle)) {
-                text_2_handle_data->content_glyph = 'B';
+                text_2_handle_data->content_glyph = 'Q';
                 text_2_handle_data->text_outline_size_ndc = 0.2f;
-                text_2_handle_data->color = ray_colors::cyan;
+                text_2_handle_data->color = glm::vec4(1);
                 text_2_handle_data->text_outline_color = ray_colors::lime;
                 text_2_handle_data->background_color = ray_colors::transparent;
                 text_2_handle_data->space_basis = e_space_type::world;
